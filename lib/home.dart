@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:contacts/contact.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -18,6 +20,7 @@ class _HomeState extends State<Home> {
   void deleteContact(int index) {
     setState(() {
       contacts.removeAt(index);
+      saveContacts();
     });
   }
 
@@ -27,6 +30,39 @@ class _HomeState extends State<Home> {
       nameController.text = contacts[index].name;
       numberController.text = contacts[index].number;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadContacts();
+  }
+
+  void saveContacts() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> contactList = contacts
+        .map((contact) => jsonEncode({
+              'name': contact.name,
+              'number': contact.number,
+            }))
+        .toList();
+    prefs.setStringList('contacts', contactList);
+  }
+
+  void loadContacts() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? contactList = prefs.getStringList('contacts');
+    if (contactList != null) {
+      setState(() {
+        contacts = contactList.map((contact) {
+          Map<String, dynamic> contactMap = jsonDecode(contact);
+          return Contact(
+            name: contactMap['name'],
+            number: contactMap['number'],
+          );
+        }).toList();
+      });
+    }
   }
 
   @override
@@ -72,6 +108,7 @@ class _HomeState extends State<Home> {
                             number.isNotEmpty &&
                             selectedIndex == -1) {
                           contacts.add(Contact(name: name, number: number));
+                          saveContacts();
                           nameController.text = '';
                           numberController.text = '';
                         }
@@ -88,6 +125,7 @@ class _HomeState extends State<Home> {
                             selectedIndex != -1) {
                           contacts[selectedIndex].name = name;
                           contacts[selectedIndex].number = number;
+                          saveContacts();
                           selectedIndex = -1;
                           nameController.text = '';
                           numberController.text = '';
@@ -98,43 +136,6 @@ class _HomeState extends State<Home> {
               ],
             ),
             const SizedBox(height: 10),
-            // Container(
-            //   color: Colors.deepPurple[200],
-            //   padding: const EdgeInsets.all(15),
-            //   child: const Row(
-            //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //     children: [
-            //       Row(children: [
-            //         Text(
-            //           'J',
-            //           style: TextStyle(
-            //               backgroundColor: Colors.white, fontSize: 40),
-            //         ),
-            //         SizedBox(width: 20),
-            //         Column(
-            //           children: [
-            //             Text(
-            //               'Jatinder',
-            //               style: TextStyle(
-            //                   fontWeight: FontWeight.bold, fontSize: 22),
-            //             ),
-            //             Text(
-            //               '9876543210',
-            //               style: TextStyle(fontSize: 18),
-            //             ),
-            //           ],
-            //         )
-            //       ]),
-            //       Row(
-            //         children: [
-            //           Icon(Icons.edit, size: 30),
-            //           SizedBox(width: 20),
-            //           Icon(Icons.delete, size: 30),
-            //         ],
-            //       ),
-            //     ],
-            //   ),
-            // ),
             contacts.isEmpty
                 ? const Expanded(child: Center(child: Text('No Contacts ...')))
                 : Expanded(
@@ -163,18 +164,11 @@ class _HomeState extends State<Home> {
           children: [
             Text(
               contacts[index].name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(contacts[index].number),
           ],
         ),
-        // trailing: const Row(
-        //   children: [
-        //     Icon(Icons.edit, size: 30),
-        //     SizedBox(width: 20),
-        //     Icon(Icons.delete, size: 30),
-        //   ],
-        // ),
         trailing: SizedBox(
           width: 70,
           child: Row(
